@@ -46,8 +46,8 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          days: { type: "number", description: "Only users within this many days (omit for all)" },
-          limit: { type: "number", description: "Max results (default 20)" },
+          days: { type: "integer", description: "Only users within this many days (omit for all)" },
+          limit: { type: "integer", description: "Max results (default 20)" },
         },
       },
     },
@@ -60,7 +60,7 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {
-          limit: { type: "number", description: "Max results (default 50)" },
+          limit: { type: "integer", description: "Max results (default 50)" },
         },
       },
     },
@@ -83,14 +83,11 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "get_payment_requests_by_status",
-      description: "List payment requests filtered by status",
+      description: "List payment requests filtered by status: PENDING, PAID, DECLINED, or CANCELLED",
       parameters: {
         type: "object",
         properties: {
-          status: {
-            type: "string",
-            enum: ["PENDING", "PAID", "DECLINED", "CANCELLED"],
-          },
+          status: { type: "string", description: "One of: PENDING, PAID, DECLINED, CANCELLED" },
           limit: { type: "number", description: "Max results (default 100)" },
         },
         required: ["status"],
@@ -112,6 +109,7 @@ Be concise and helpful.`;
     ...messages,
   ];
 
+  try {
   for (let i = 0; i < 10; i++) {
     const response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
@@ -129,7 +127,11 @@ Be concise and helpful.`;
 
     const toolResults = await Promise.all(
       message.tool_calls.map(async (tc) => {
-        const args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+        const raw = (tc.function.arguments ? JSON.parse(tc.function.arguments) : {}) as Record<string, unknown>;
+        // Coerce string numbers to real numbers (Groq sometimes generates "30" instead of 30)
+        const args = Object.fromEntries(
+          Object.entries(raw ?? {}).map(([k, v]) => [k, typeof v === "string" && /^\d+$/.test(v) ? parseInt(v) : v])
+        );
         let result: string;
         try {
           const data = await callTool(tc.function.name, args);
@@ -145,4 +147,10 @@ Be concise and helpful.`;
   }
 
   return Response.json({ content: "Sorry, I could not complete that request." }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = (err as Error).message ?? "Unknown error";
+    // Log full error for debugging
+    console.error("Chat error:", JSON.stringify(err, Object.getOwnPropertyNames(err as object)));
+    return Response.json({ content: `Error: ${msg}` }, { status: 500 });
+  }
 }
