@@ -154,12 +154,12 @@ export default function DashboardPage() {
               <p className="text-zinc-400 text-sm text-center py-12">No data</p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={txnByDay} barSize={20}>
+                <BarChart data={txnByDay} maxBarSize={60}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                   <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, "Volume"]} />
-                  <Bar dataKey="volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="volume" fill="#3b82f6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -176,7 +176,7 @@ export default function DashboardPage() {
               <>
                 <ResponsiveContainer width="100%" height={160}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40} isAnimationActive={false}>
                       {pieData.map((entry) => (
                         <Cell key={entry.name} fill={STATUS_COLORS[entry.name] ?? "#94a3b8"} />
                       ))}
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                   <XAxis type="number" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                   <YAxis type="category" dataKey="username" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={80} />
                   <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, "Balance"]} />
-                  <Bar dataKey="balance" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="balance" fill="#8b5cf6" radius={[0, 4, 4, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip formatter={(v: number) => [v, "New users"]} />
-                  <Line type="monotone" dataKey="users" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="users" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
