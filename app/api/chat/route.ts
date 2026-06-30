@@ -12,11 +12,11 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "query",
-      description: "Run a read-only SQL SELECT query against the c1pay database",
+      description: "Run any read-only SQL SELECT query against the c1pay database. Tables: users (id, username, balance_cents, created_at), transactions (id, sender_id, recipient_id, amount_cents, note, created_at), payment_requests (id, requester_id, recipient_id, amount_cents, note, status, created_at). Use this for any time-range or custom filter questions.",
       parameters: {
         type: "object",
         properties: {
-          sql: { type: "string", description: "The SQL SELECT query to execute" },
+          sql: { type: "string", description: "A valid SQL SELECT query" },
         },
         required: ["sql"],
       },
@@ -25,16 +25,8 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "list_tables",
-      description: "List all tables in the c1pay database",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "get_dashboard_summary",
-      description: "Get a high-level summary: total users, total transaction volume, pending payment requests",
+      description: "Get totals: number of users, transaction volume, payment request counts by status",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -42,34 +34,23 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "get_recent_users",
-      description: "List users who registered recently, ordered newest first",
-      parameters: {
-        type: "object",
-        properties: {
-          days: { type: "integer", description: "Only users within this many days (omit for all)" },
-          limit: { type: "integer", description: "Max results (default 20)" },
-        },
-      },
+      description: "List the 20 most recently registered users with their balance",
+      parameters: { type: "object", properties: {} },
     },
   },
   {
     type: "function",
     function: {
       name: "get_transaction_history",
-      description: "List recent transactions with sender/recipient usernames and amounts",
-      parameters: {
-        type: "object",
-        properties: {
-          limit: { type: "integer", description: "Max results (default 50)" },
-        },
-      },
+      description: "List the 50 most recent transactions with sender, recipient, and amount",
+      parameters: { type: "object", properties: {} },
     },
   },
   {
     type: "function",
     function: {
       name: "get_user_details",
-      description: "Get full profile for a user by username or user ID, including balance and transaction history",
+      description: "Get full profile for a specific user: balance, sent and received transactions, payment requests",
       parameters: {
         type: "object",
         properties: {
@@ -83,12 +64,11 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "get_payment_requests_by_status",
-      description: "List payment requests filtered by status: PENDING, PAID, DECLINED, or CANCELLED",
+      description: "List payment requests filtered by status",
       parameters: {
         type: "object",
         properties: {
           status: { type: "string", description: "One of: PENDING, PAID, DECLINED, CANCELLED" },
-          limit: { type: "number", description: "Max results (default 100)" },
         },
         required: ["status"],
       },
