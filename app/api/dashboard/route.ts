@@ -1,11 +1,4 @@
-import { Pool } from "pg";
-
-const pool = new Pool({
-  host: "localhost",
-  port: 5432,
-  database: "c1pay",
-  user: process.env.PGUSER || process.env.USER,
-});
+import { callTool } from "@/lib/mcp-client";
 
 export async function GET() {
   try {
@@ -17,75 +10,63 @@ export async function GET() {
       userRegistrationsByDay,
       recentTransactions,
     ] = await Promise.all([
-      // KPI summary
-      pool.query(`
-        SELECT
-          (SELECT COUNT(*) FROM users) AS total_users,
-          (SELECT COUNT(*) FROM transactions) AS total_transactions,
-          (SELECT ROUND(COALESCE(SUM(amount_cents), 0) / 100.0, 2) FROM transactions) AS total_volume_dollars,
-          (SELECT COUNT(*) FROM payment_requests WHERE status = 'PENDING') AS pending_requests,
-          (SELECT ROUND(COALESCE(SUM(amount_cents), 0) / 100.0, 2) FROM payment_requests WHERE status = 'PENDING') AS pending_dollars
-      `),
+      callTool("get_dashboard_summary"),
 
-      // Payment requests by status
-      pool.query(`
-        SELECT status, COUNT(*) AS count, ROUND(SUM(amount_cents)/100.0, 2) AS total_dollars
-        FROM payment_requests
-        GROUP BY status
-        ORDER BY count DESC
-      `),
+      callTool("query", {
+        sql: `SELECT status, COUNT(*) AS count, ROUND(SUM(amount_cents)/100.0, 2) AS total_dollars
+              FROM payment_requests GROUP BY status ORDER BY count DESC`,
+      }),
 
-      // Transaction volume by day (last 30 days)
-      pool.query(`
-        SELECT
-          DATE(created_at) AS date,
-          COUNT(*) AS count,
-          ROUND(SUM(amount_cents) / 100.0, 2) AS volume_dollars
-        FROM transactions
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-      `),
+      callTool("query", {
+        sql: `SELECT DATE(created_at) AS date, COUNT(*) AS count,
+                     ROUND(SUM(amount_cents)/100.0, 2) AS volume_dollars
+              FROM transactions
+              WHERE created_at >= NOW() - INTERVAL '30 days'
+              GROUP BY DATE(created_at) ORDER BY date ASC`,
+      }),
 
-      // Top 10 users by balance
-      pool.query(`
-        SELECT username, ROUND(balance_cents / 100.0, 2) AS balance_dollars
-        FROM users
-        ORDER BY balance_cents DESC
-        LIMIT 10
-      `),
+      callTool("query", {
+        sql: `SELECT username, ROUND(balance_cents/100.0, 2) AS balance_dollars
+              FROM users ORDER BY balance_cents DESC LIMIT 10`,
+      }),
 
-      // User registrations by day (last 30 days)
-      pool.query(`
-        SELECT
-          DATE(created_at) AS date,
-          COUNT(*) AS count
-        FROM users
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(created_at)
-        ORDER BY date ASC
-      `),
+      callTool("query", {
+        sql: `SELECT DATE(created_at) AS date, COUNT(*) AS count
+              FROM users
+              WHERE created_at >= NOW() - INTERVAL '30 days'
+              GROUP BY DATE(created_at) ORDER BY date ASC`,
+      }),
 
-      // Recent 5 transactions
-      pool.query(`
-        SELECT t.id, s.username AS sender, r.username AS recipient,
-               ROUND(t.amount_cents / 100.0, 2) AS amount_dollars,
-               t.note, t.created_at
-        FROM transactions t
-        JOIN users s ON s.id = t.sender_id
-        JOIN users r ON r.id = t.recipient_id
-        ORDER BY t.created_at DESC
-        LIMIT 5
-      `),
+      callTool("get_transaction_history", { limit: 5 }),
     ]);
 
+    // Normalize get_dashboard_summary shape into flat KPI fields
+    const raw = summary as {
+      users: { total: number; total_balance_dollars: string };
+      transactions: { total: number; total_volume_dollars: string };
+      payment_requests_by_status: { status: string; count: number; total_dollars: string }[];
+    };
+    const pending = raw.payment_requests_by_status?.find((s) => s.status === "PENDING");
+    const normalizedSummary = {
+      total_users: String(raw.users?.total ?? 0),
+      total_transactions: String(raw.transactions?.total ?? 0),
+      total_volume_dollars: String(raw.transactions?.total_volume_dollars ?? "0"),
+      pending_requests: String(pending?.count ?? 0),
+      pending_dollars: String(pending?.total_dollars ?? "0"),
+    };
+
     return Response.json({
-      summary: summary.rows[0],
-      paymentRequestsByStatus: paymentRequestsByStatus.rows,
-      transactionVolumeByDay: transactionVolumeByDay.rows,
-      topUsersByBalance: topUsersByBalance.rows,
-      userRegistrationsByDay: userRegistrationsByDay.rows,
-      recentTransactions: recentTransactions.rows,
+      summary: normalizedSummary,
+      paymentRequestsByStatus,
+      transactionVolumeByDay,
+      topUsersByBalance,
+      userRegistrationsByDay,
+      recentTransactions: Array.isArray(recentTransactions)
+        ? (recentTransactions as Record<string, unknown>[]).map((t) => ({
+            ...t,
+            amount_dollars: t.amount_dollars ?? (Number(t.amount_cents) / 100).toFixed(2),
+          }))
+        : [],
     });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 });
