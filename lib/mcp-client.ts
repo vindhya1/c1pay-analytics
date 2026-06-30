@@ -1,7 +1,12 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
-const MCP_SERVER_PATH = "/Users/vindhyasurampudi/Documents/Workspace/postgres-db-mcp-server/src/index.js";
+const mcpConfig = JSON.parse(
+  readFileSync(resolve(process.cwd(), ".mcp.json"), "utf-8")
+);
+const serverConfig = mcpConfig.mcpServers["c1pay-db"];
 
 // Singleton — reused across requests in the same Next.js process
 declare global {
@@ -13,8 +18,8 @@ async function getClient(): Promise<Client> {
   if (global.__mcpClient) return global.__mcpClient;
 
   const transport = new StdioClientTransport({
-    command: "node",
-    args: [MCP_SERVER_PATH],
+    command: serverConfig.command,
+    args: serverConfig.args,
   });
 
   const client = new Client({ name: "c1pay-analytics", version: "1.0.0" });
