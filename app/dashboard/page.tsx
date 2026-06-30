@@ -54,16 +54,26 @@ function fmt(date: string) {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  useEffect(() => {
+  function fetchData() {
     fetch("/api/dashboard")
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else setData(d);
+        else { setData(d); setLastUpdated(new Date()); }
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }
+
+  useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   if (error) {
     return (
@@ -113,14 +123,30 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">c1pay Analytics</h1>
-            <p className="text-sm text-zinc-500">Live data from your database</p>
+            <p className="text-sm text-zinc-500">
+              {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Live data from your database"}
+            </p>
           </div>
-          <a
-            href="/chat"
-            className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          >
-            Ask AI →
-          </a>
+          <div className="flex items-center gap-3">
+            {/* Auto-refresh toggle */}
+            <button
+              onClick={() => setAutoRefresh((v) => !v)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                autoRefresh
+                  ? "bg-green-50 border-green-300 text-green-700 dark:bg-green-950 dark:border-green-700 dark:text-green-400"
+                  : "bg-white border-zinc-200 text-zinc-500 dark:bg-zinc-900 dark:border-zinc-700"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${autoRefresh ? "bg-green-500 animate-pulse" : "bg-zinc-300"}`} />
+              {autoRefresh ? "Live · 10s" : "Auto-refresh off"}
+            </button>
+            <a
+              href="/chat"
+              className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              Ask AI →
+            </a>
+          </div>
         </div>
 
         {/* KPI Cards */}
