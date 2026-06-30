@@ -11,32 +11,10 @@ export async function GET() {
       recentTransactions,
     ] = await Promise.all([
       callTool("get_dashboard_summary"),
-
-      callTool("query", {
-        sql: `SELECT status, COUNT(*) AS count, ROUND(SUM(amount_cents)/100.0, 2) AS total_dollars
-              FROM payment_requests GROUP BY status ORDER BY count DESC`,
-      }),
-
-      callTool("query", {
-        sql: `SELECT DATE(created_at) AS date, COUNT(*) AS count,
-                     ROUND(SUM(amount_cents)/100.0, 2) AS volume_dollars
-              FROM transactions
-              WHERE created_at >= NOW() - INTERVAL '30 days'
-              GROUP BY DATE(created_at) ORDER BY date ASC`,
-      }),
-
-      callTool("query", {
-        sql: `SELECT username, ROUND(balance_cents/100.0, 2) AS balance_dollars
-              FROM users ORDER BY balance_cents DESC LIMIT 10`,
-      }),
-
-      callTool("query", {
-        sql: `SELECT DATE(created_at) AS date, COUNT(*) AS count
-              FROM users
-              WHERE created_at >= NOW() - INTERVAL '30 days'
-              GROUP BY DATE(created_at) ORDER BY date ASC`,
-      }),
-
+      callTool("get_payment_requests_summary_by_status"),
+      callTool("get_transaction_volume_by_day"),
+      callTool("get_top_users_by_balance"),
+      callTool("get_user_registrations_by_day"),
       callTool("get_transaction_history", { limit: 5 }),
     ]);
 
