@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "c1pay-db": {
+      "command": "node",
+      "args": ["/Users/vindhyasurampudi/Documents/Workspace/postgres-db-mcp-server/src/index.js"]
+    }
+  }
+}
