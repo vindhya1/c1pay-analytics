@@ -27,7 +27,6 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: "get_dashboard_summary",
       description: "Get totals: number of users, transaction volume, payment request counts by status",
-      parameters: { type: "object", properties: {} },
     },
   },
   {
@@ -35,7 +34,6 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: "get_recent_users",
       description: "List the 20 most recently registered users with their balance",
-      parameters: { type: "object", properties: {} },
     },
   },
   {
@@ -43,7 +41,6 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: "get_transaction_history",
       description: "List the 50 most recent transactions with sender, recipient, and amount",
-      parameters: { type: "object", properties: {} },
     },
   },
   {
